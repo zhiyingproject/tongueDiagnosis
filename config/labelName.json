@@ -1,0 +1,118 @@
+{
+	"color":[
+		{
+			"labelName": "0",
+			"chineseName":"淡红舌"
+		},
+		{
+			"labelName": "1",
+			"chineseName":"淡白舌"
+		},
+		{
+			"labelName": "2",
+			"chineseName":"淡舌"
+		},
+		{
+			"labelName": "3",
+			"chineseName":"红绛舌"
+		},
+		{
+			"labelName": "4",
+			"chineseName":"青紫舌_NA"
+		}
+	],
+	"shape":[
+		{
+			"labelName": "0",
+			"chineseName":"正常"
+		},
+		{
+			"labelName": "1",
+			"chineseName":"胖大舌"
+		},
+		{
+			"labelName": "2",
+			"chineseName":"瘦薄舌"
+		},
+		{
+			"labelName": "3",
+			"chineseName":"短缩舌"
+		},
+		{
+			"labelName": "4",
+			"chineseName":"老舌_NA"
+		},
+		{
+			"labelName": "5",
+			"chineseName":"嫩舌_NA"
+		},
+		{
+			"labelName": "6",
+			"chineseName":"齿痕舌_NA"
+		}
+	],
+	"top":[
+		{
+			"labelName": "0",
+			"chineseName":"正常"
+		},
+		{
+			"labelName": "1",
+			"chineseName":"裂纹"
+		},
+		{
+			"labelName": "2",
+			"chineseName":"淤斑"
+		},
+		{
+			"labelName": "3",
+			"chineseName":"点刺"
+		}
+	],
+	"coatingColor":[
+		{
+			"labelName": "0",
+			"chineseName":"白"
+		},
+		{
+			"labelName": "1",
+			"chineseName":"黄"
+		},
+		{
+			"labelName": "2",
+			"chineseName":"灰"
+		}
+	],
+	"coatingAmount":[
+		{
+			"labelName": "0",
+			"chineseName":"薄"
+		},
+		{
+			"labelName": "1",
+			"chineseName":"厚"
+		},
+		{
+			"labelName": "2",
+			"chineseName":"少"
+		}
+	],
+	"coatingProperty":[
+		{
+			"labelName": "0",
+			"chineseName":"正常"
+		},
+		{
+			"labelName": "1",
+			"chineseName":"腻"
+		},
+		{
+			"labelName": "2",
+			"chineseName":"燥"
+		},
+		{
+			"labelName": "3",
+			"chineseName":"滑"
+		}
+	]
+}
