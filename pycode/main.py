@@ -1,92 +1,55 @@
-import cv2
-import matplotlib.pyplot as plt
-import dlib
 import sys
-import glob
+import numpy as np
+import tensorflow as tf
+from keras.utils import np_utils
+import os
+from tensorflow import keras
+import tables
+sys.path.append('./myClass/')
+import preprocessing
+import create_model
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    detector = dlib.get_frontal_face_detector()
-    name_label = "N"
-    for i_file, file_name in enumerate(glob.glob("../originalData/apparatus/*.jpg")):
 
-        original = cv2.imread(file_name)
-        print(original.shape)
-        sys.exit(0)
-        try:
-            resized = cv2.resize(original, (200, 356))
-        except:
-            print(f"Cannot resize {file_name}")
+categories = ['spike', 'color', 'shape', 'crack', 'coatingColor', 'coatingAmount']
+original_path = "../originalData/apparatus"
+config_path = "../config"
+model_name = "iteration1"
+epoch = 16
+img_height = 166
+img_width = 128
+input_shape = (img_height, img_width, 3)
 
-        gray = cv2.cvtColor(src=resized, code=cv2.COLOR_BGR2GRAY)
+for category in categories:
+    print('================================')
+    print(f'Predicting {category}')
+    print('================================')
 
-        faces = detector(gray)
-        area = []
-        coordinates = []
-        for face in faces:
-            x1 = face.left() - 3
-            y1 = face.top() - 6
-            x2 = face.right() + 3
-            y2 = face.bottom() + 20
-            cv2.rectangle(
-                img=resized,
-                pt1=(x1, y1),
-                pt2=(x2, y2),
-                color=(0, 255, 0),
-                thickness=4
-            )
-            area.append((x2 - x1) * (y2 - y1))
-            coordinates.append((x1, y1, x2, y2))
-        if not area:
-            print("Cannot find face!", file_name)
-            input("...")
-            continue
-        idx_max = area.index(max(area))
-        x1 = coordinates[idx_max][0]
-        y1 = coordinates[idx_max][1]
-        x2 = coordinates[idx_max][2]
-        y2 = coordinates[idx_max][3]
-        print(y1,y2,x1,x2)
-        ROI = resized[y1:y2, x1:x2]
-        ROI_resize = cv2.resize(ROI, (90, 100))
-        print(file_name)
-        cv2.imwrite(f"./data/clean/{i_file}.png", ROI_resize)
-        '''cv2.imshow(winname="1", mat=ROI)
-        cv2.waitKey(
-            delay=0
-            )
-        cv2.destroyAllWindows()
-        '''
-        '''
-        w = int((x2 - x1)/3.0)
-        h = int((y2 - y1)/3.0)
-        for i in range(0, 3):
-            y_sub_1 = y1 + i * h
-            y_sub_2 = y1 + (i + 1) * h
-            for j in range(0, 3):
-                print(i,j,"*******")
-                x_sub_1 = x1 + j * w
-                x_sub_2 = x1 + (j + 1) * w
 
-                ROI = resized[y_sub_1:y_sub_2, x_sub_1:x_sub_2]
-                cv2.imwrite(f"./data{file_name}{i}{j}.png", ROI)
+    checkpoint_path = f'../models/{category}/{model_name}/cp-{epoch}.ckpt'
+    model_path = f'../models/{category}/{model_name}'
+    checkpoint_dir = os.path.dirname(checkpoint_path)
+    model = keras.models.load_model(model_path)
 
-        '''
+    hdf5_path = f"../datasets/hdf5{category}"
+    hdf5_file = tables.open_file(hdf5_path, mode='r')
+    labels = preprocessing.preprocessing(category, config_path, original_path,
+                                         hdf5_file, img_width, img_height).get_label_no()
+    num_classes = len(list(labels.keys()))
+    print(labels)
+#    model_name = f"{category}.model.weights.best.hdf5"
+    # model.load_weights(f'{category}.model.weights.best.hdf5')
+    test_data = np.array(hdf5_file.root.test_img)
+    test_label_tmp = np.array(hdf5_file.root.test_labels)
+    test_label = np_utils.to_categorical(test_label_tmp, num_classes)
+    score = model.evaluate(test_data, test_label, verbose=0)
 
-        # cv2.imshow(winname="1", mat=resized)
-        # cv2.waitKey(
-        #    delay=0
-        #    )
-    # cv2.destroyAllWindows()
+    print('\n', 'Test accuracy:', score[1])
+    classes = list(labels.values())
+    for i, d in enumerate(test_data):
+        d_e = (np.expand_dims(d, 0))
 
-'''
-    plt.imshow(original)
-    plt.show()
-    plt.imshow(resized)
-
-    plt.show()
-
-    print(original.shape)
-    print(resized.shape)
-'''
+        predictions = model.predict(d_e)
+        score = tf.nn.softmax(predictions[0])
+        print(score)
+        print(100 * np.max(score), classes[np.argmax(score)], classes[int(test_label_tmp[i])])
