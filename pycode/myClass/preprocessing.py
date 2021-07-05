@@ -1,14 +1,13 @@
-import json
-import glob
-import cv2
+import tables
 import pandas as pd
+import json
 from operator import itemgetter
 from random import shuffle
-import tables
 import numpy as np
+import cv2
 
 
-class preprocessing():
+class hdf5File:
     def __init__(self, category, config_p, data_p, hdf5_p, img_width, img_height):
         self.category = category
         self.config_path = config_p
@@ -31,7 +30,6 @@ class preprocessing():
     def clean_labels(self):
         labels_raw = pd.read_csv(f"{self.config_path}/labels.csv")
         label_no = self.get_label_no()
-        print(label_no)
         lst_file = [f"{d}a.jpg" for d in labels_raw["fileName"]]
         if self.category != "top":
             lst_label = [list(label_no.keys())[list(label_no.values()).index(l_cn)]
