@@ -1,97 +1,129 @@
-import tables
+import matplotlib.pyplot as plt
 import numpy as np
+import os
+import PIL
 from keras.utils import np_utils
 import tensorflow as tf
+from tensorflow import keras
+from tensorflow.keras import layers
+from tensorflow.keras.models import Sequential
 import sys
 sys.path.insert(0, './myClass/')
 import preprocessing
 import create_model
 from collections import Counter
+import pandas as pd
+import pathlib
+import tensorflow_addons as tfa
 
 
-categories = ['spike', 'color', 'shape', 'crack', 'coatingColor', 'coatingAmount']
-preprocessing_flag = True
-original_path = "../originalData/apparatus"
-config_path = "../config"
-subtract_mean = True
-epoch = 16
-img_height = 166
+original_p = "../../../originalData/apparatus"
+to_p = "../datasets"
+config_f = '../config/labels.csv'
+
+labels = pd.read_csv(config_f)
+categories = labels.columns[1:]
+
+batch_size = 32
+img_height = 169
 img_width = 128
-input_shape = (img_height, img_width, 3)
+
+# preprocessing.organize_f(original_p, to_p, config_f)
+
+for category in categories:
+    print(category)
+    data_dir = f'{to_p}/{category}'
+    data_dir = pathlib.Path(data_dir)
+
+    image_count = len(list(data_dir.glob('*/*.jpg')))
+    train_ds = tf.keras.preprocessing.image_dataset_from_directory(
+        data_dir,
+        validation_split=0.2,
+        subset='training',
+        seed=123,
+        image_size=(img_height, img_width),
+        batch_size=batch_size
+    )
+
+    val_ds = tf.keras.preprocessing.image_dataset_from_directory(
+        data_dir,
+        validation_split=0.2,
+        subset='validation',
+        seed=123,
+        image_size=(img_height, img_width),
+        batch_size=batch_size
+    )
+
+    num_classes = len(train_ds.class_names)
 
 
-def get_training_data(category, over_sampling_flag=0):
-    hdf5_path = f"../datasets/hdf5{category}"
+    AUTOTUNE = tf.data.AUTOTUNE
 
-    if preprocessing_flag:
-        print("preprocessing files")
-        preprocessing_class = preprocessing.hdf5File(category, config_path, original_path, hdf5_path,
-                                                     img_width, img_height)
-        preprocessing_class.hdf5_generator()
+    train_ds = train_ds.cache().shuffle(1000).prefetch(buffer_size=AUTOTUNE)
+    val_ds = val_ds.cache().prefetch(buffer_size=AUTOTUNE)
 
-    hdf5_file = tables.open_file(hdf5_path, mode='r')
-    if subtract_mean:
-        mm = hdf5_file.root.train_mean[0]
-        mm = mm[np.newaxis, ...]
+    normalization_layer = layers.experimental.preprocessing.Rescaling(1./255)
 
-    train_data = np.array(hdf5_file.root.train_img)
-    train_label = np.array(hdf5_file.root.train_labels)
-    val_data = np.array(hdf5_file.root.val_img)
-    val_label = np.array(hdf5_file.root.val_labels)
-
-    hdf5_file.close()
-    return train_data, train_label, val_data, val_label
+    normalization_ds = train_ds.map(lambda x, y: (normalization_layer(x), y))
+    image_batch, labels_batch = next(iter(normalization_ds))
 
 
-def base_line(model_name):
-    '''
-    this function trains the model without dealing with unbalanced classes, serving as a baseline
-    :param model_name: the name for cnn model
-    :return:
-    '''
-    for category in categories:
-        print("=================================")
-        print(f"Training the model for {category}")
-        print("=================================")
+    data_augmentation = keras.Sequential(
+        [
+            layers.experimental.preprocessing.RandomFlip("horizontal",
+                                                         input_shape=(img_height,
+                                                                      img_width,
+                                                                      3)),
+            layers.experimental.preprocessing.RandomRotation(0.1),
+            layers.experimental.preprocessing.RandomZoom(0.1),
+        ]
+    )
 
-        train_data, train_label, val_data, val_label = get_training_data(category)
-        num_classes = len(np.unique(train_label))
+    model = Sequential([
+        data_augmentation,
+        layers.experimental.preprocessing.Rescaling(1. / 255, input_shape=(img_height, img_width, 3)),
+        layers.Conv2D(16, 3, padding='same', activation='relu'),
+        layers.MaxPooling2D(),
+        layers.Conv2D(32, 3, padding='same', activation='relu'),
+        layers.MaxPooling2D(),
+        layers.Conv2D(64, 3, padding='same', activation='relu'),
+        layers.MaxPooling2D(),
+        layers.Flatten(),
+        layers.Dense(128, activation='relu'),
+        layers.Dense(num_classes)
+    ])
 
-        train_label = np_utils.to_categorical(train_label, num_classes)
-        val_label = np_utils.to_categorical(val_label, num_classes)
+    model.compile(optimizer='adam',
+                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+                  metrics=['accuracy']
+                 )
 
-        # building the model
-        checkpoint_path = f'../models/{category}/{model_name}/cp-{epoch}.ckpt'
-        model_path = f'../models/{category}/{model_name}'
-        batch_size = 32
-        cp_callback = tf.keras.callbacks.ModelCheckpoint(
-            filepath=checkpoint_path,
-            verbose=1,
-            save_weights_only=True
-        )
-        model = create_model.tf_models(model_name, input_shape, num_classes)
-        hist = model.fit(train_data, train_label,
-                         batch_size=batch_size, epochs=epoch,
-                         validation_data=(val_data, val_label),
-                         callbacks=[cp_callback], verbose=1)
-        model.save(model_path)
+    epochs = 10
+    history = model.fit(
+              train_ds,
+              validation_data=val_ds,
+              epochs=epochs
+              )
 
+    acc = history.history['accuracy']
+    val_acc = history.history['val_accuracy']
 
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
 
-def over_sampling():
+    epochs_range = range(epochs)
 
-    for category in categories[3:4]:
-        print("=================================")
-        print(f"Training the model for {category}")
-        print("=================================")
+    plt.figure(figsize=(8, 8))
+    plt.subplot(1, 2, 1)
+    plt.plot(epochs_range, acc, label='Training Accuracy')
+    plt.plot(epochs_range, val_acc, label='Validation Accuracy')
+    plt.legend(loc='lower right')
+    plt.title(f'Training and Validation Accuracy_{category}')
 
-        train_data, train_label, val_data, val_label = get_training_data(category)
-        train_count = Counter(train_label)
-        print(train_count)
+    plt.subplot(1, 2, 2)
+    plt.plot(epochs_range, loss, label="Training Loss")
+    plt.plot(epochs_range, val_loss, label="Validation Loss")
+    plt.legend(loc='upper right')
+    plt.title(f'Training and Validation Loss_{category}')
+    plt.show()
 
-
-
-if __name__ == '__main__':
-    model_name_input = "iteration2"
-    base_line(model_name_input)
-    # over_sampling()
