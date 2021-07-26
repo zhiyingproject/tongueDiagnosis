@@ -108,7 +108,7 @@ for category in categories:
     results = []
     for name, model in models:
         kfold = KFold(n_splits=10)
-        cv_results = cross_val_score(model, train_ds, train_labels, cv=kfold, scoring='accuracy')
+        cv_results = cross_val_score(model, train_ds, train_labels, cv=kfold, scoring='balanced_accuracy')
         results.append(cv_results)
         names.append(name)
         msg = "%s: %f (%f)" % (name, cv_results.mean(), cv_results.std())
