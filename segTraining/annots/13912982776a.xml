@@ -1,0 +1,26 @@
+<annotation>
+	<folder>segTraining</folder>
+	<filename>13912982776a.jpg</filename>
+	<path>...</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>128</width>
+		<height>169</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>tongue</name>
+		<pose>Unspecified</pose>
+		<truncated>0</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>14</xmin>
+			<ymin>51</ymin>
+			<xmax>102</xmax>
+			<ymax>137</ymax>
+		</bndbox>
+	</object>
+	</annotation>
