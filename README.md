@@ -1,2 +1,2 @@
 # tongueDiagnosis
- This repository is the model trained for a tongue diagnosis system, using object detection and image classification techniques.
+ This repository is a sample of my work. Most of my work cannot be shared.
